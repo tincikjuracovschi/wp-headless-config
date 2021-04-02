@@ -11,34 +11,34 @@
 
 $urlError = "";
 $url = "";
-$servername=DB_HOST;
+$servername = DB_HOST;
 $dbname = DB_NAME;
 $value = null;
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
-    function test_input($data) {
+    function clear_input($data) {
         $data = trim($data);
         $data = stripslashes($data);
         $data = htmlspecialchars($data);
         return $data;
     }
 
-    if (!preg_match('/^(http|https):\\/\\/[a-z0-9_]+([\\-\\.]{1}[a-z_0-9]+)*\\.[_a-z]{2,5}'.'((:[0-9]{1,5})?\\/.*)?$/i',test_input($_POST["headless_config_plugin_settings"]["frontend_domain"]))) {
+    if (!preg_match('/^(http|https):\\/\\/[a-z0-9_]+([\\-\\.]{1}[a-z_0-9]+)*\\.[_a-z]{2,5}'.'((:[0-9]{1,5})?\\/.*)?$/i',clear_input($_POST["headless_config_plugin_settings"]["frontend_domain"]))) {
         $urlError = "Domain is not valid";
         $value = null;
         $error_value = "fail";
     } else {
 
         if (isset($_POST['submit'])) {
-            $some_text_field = $_POST["headless_config_plugin_settings"]["frontend_domain"];
-            $value = $some_text_field;
+            $url_address = $_POST["headless_config_plugin_settings"]["frontend_domain"];
+            $value = $url_address;
 
 
             try {
                 $conn = new PDO("mysql:host=$servername;dbname=$dbname", DB_USER, DB_PASSWORD);
                 $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-                $stmt = $conn->prepare("UPDATE wp_input_url_data SET url_value='$some_text_field' WHERE url_name = 'url address'");
+                $stmt = $conn->prepare("UPDATE wp_input_url_data SET url_value='$url_address' WHERE url_name = 'url address'");
 
                 if ($stmt->execute()) {
                     $error_value = "pass";
@@ -54,9 +54,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 }
 
-  /*---------------------------------------------------*/
-
-function test_contact_form()
+function create_input_url_data_table()
 {
     global $wpdb;
     $db_table_name = $wpdb->prefix . 'input_url_data';  // table name
@@ -101,10 +99,8 @@ function test_contact_form()
     }
 }
 
-register_activation_hook( __FILE__, 'test_contact_form' );
+  register_activation_hook( __FILE__, 'create_input_url_data_table' );
 
-
-  /*---------------------------------------------------*/
 
   function headless_config_add_settings_page() {
     add_options_page(
@@ -122,8 +118,8 @@ register_activation_hook( __FILE__, 'test_contact_form' );
   function headless_config_render_settings_page() {
       global $error_value;
       ?>
-    <h1>Headless config</h1>
-      <?php
+<h1>Headless config</h1>
+<?php
       if ($error_value == "pass") {
           echo '<div class="updated">
           <p>' . __('Success! Data have been saved.') . '</p>
@@ -135,14 +131,14 @@ register_activation_hook( __FILE__, 'test_contact_form' );
       </div>';
       }
       ?>
-    <form method="post" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]."?page=headless_config_plugin");?>">
-        <?php
+<form method="post" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]."?page=headless_config_plugin");?>">
+  <?php
         settings_fields( 'headless_config_plugin_settings' );
         do_settings_sections( 'headless_config_plugin' );
         ?>
-        <input type="submit" name="submit" class="button button-primary" value="<?php esc_attr_e( 'Save' ); ?>" />
-    </form>
-      <?php
+  <input type="submit" name="submit" class="button button-primary" value="<?php esc_attr_e( 'Save' ); ?>" />
+</form>
+<?php
     }
 
     function headless_config_register_settings() {
@@ -171,9 +167,8 @@ register_activation_hook( __FILE__, 'test_contact_form' );
     add_action('admin_init', 'headless_config_register_settings');
 
 function headless_config_render_frontend_domain_field() {
-  $servername=DB_HOST;
-  $dbname = DB_NAME;
-
+  global $servername;
+  global $dbname;
   global $urlError;
   global $value;
 
@@ -187,8 +182,7 @@ function headless_config_render_frontend_domain_field() {
 
 
     } catch(PDOException $e) {
-        echo "Something went wrong.We are trying to resolve it.";
-//        echo "Error: " . $e->getMessage();
+        echo "Something went wrong. We are trying to resolve it.";
     }
 
     $options = get_option('headless_config_plugin_settings');
@@ -198,13 +192,10 @@ function headless_config_render_frontend_domain_field() {
         esc_attr($options['frontend_domain'])
     );
     ?>
-    <span>* <?php echo $urlError;?></span>
-    <?php
+<span>* <?php echo $urlError;?></span>
+<?php
 
 
     $conn = null;
 }
-
-
-
 ?>
