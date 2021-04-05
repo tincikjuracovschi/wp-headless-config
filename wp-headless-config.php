@@ -1,19 +1,32 @@
 <?php
 
-   /*
-   Plugin Name: WP Headless config
-   Version: 1.0.0
-   Author: InsomniacDesign
-   Author URI: https://www.insomniacdesign.com/
-   */
+/*
+Plugin Name: WP Headless config
+Version: 1.0.0
+Author: InsomniacDesign
+Author URI: https://www.insomniacdesign.com/
+*/
 
-  require_once(ABSPATH . 'wp-config.php');
+require_once(ABSPATH . 'wp-config.php');
 
 $urlError = "";
 $url = "";
 $servername = DB_HOST;
 $dbname = DB_NAME;
-$value = null;
+
+
+try {
+    $conn = new PDO("mysql:host=$servername;dbname=$dbname", DB_USER, DB_PASSWORD);
+    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $stmt = $conn->prepare("SELECT url_value FROM wp_input_url_data WHERE url_name = 'url address'");
+    $stmt->execute();
+    $result = $stmt->fetchAll();
+    $value = $result[0]["url_value"];
+
+
+} catch(PDOException $e) {
+    echo "Something went wrong. We are trying to resolve it.";
+}
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
@@ -26,7 +39,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     if (!preg_match('/^(http|https):\\/\\/[a-z0-9_]+([\\-\\.]{1}[a-z_0-9]+)*\\.[_a-z]{2,5}'.'((:[0-9]{1,5})?\\/.*)?$/i',clear_input($_POST["headless_config_plugin_settings"]["frontend_domain"]))) {
         $urlError = "Domain is not valid";
-        $value = null;
         $error_value = "fail";
     } else {
 
@@ -50,6 +62,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             }
 
             $conn = null;
+
         }
     }
 }
@@ -84,7 +97,7 @@ function create_input_url_data_table()
         );
     }
     else{
-       $wpdb->query("TRUNCATE TABLE $db_table_name");
+        $wpdb->query("TRUNCATE TABLE $db_table_name");
 
         $url_name = 'url address';
         $url_value = '';
@@ -99,38 +112,38 @@ function create_input_url_data_table()
     }
 }
 
-  register_activation_hook( __FILE__, 'create_input_url_data_table' );
+register_activation_hook( __FILE__, 'create_input_url_data_table' );
 
 
-  function headless_config_add_settings_page() {
+function headless_config_add_settings_page() {
     add_options_page(
-      'Headless config Settings',
-      'Headless config',
-      'manage_options',
-      'headless_config_plugin',
-      'headless_config_render_settings_page'
+        'Headless config Settings',
+        'Headless config',
+        'manage_options',
+        'headless_config_plugin',
+        'headless_config_render_settings_page'
     );
-  }
-  add_action('admin_menu', 'headless_config_add_settings_page');
+}
+add_action('admin_menu', 'headless_config_add_settings_page');
 
 
 
-  function headless_config_render_settings_page() {
-      global $error_value;
-      ?>
+function headless_config_render_settings_page() {
+    global $error_value;
+    ?>
 <h1>Headless config</h1>
 <?php
-      if ($error_value == "pass") {
-          echo '<div class="updated">
+    if ($error_value == "pass") {
+        echo '<div class="updated">
           <p>' . __('Success! Data have been saved.') . '</p>
       </div>';
-      } else if ($error_value == "fail") {
-          echo
-              '<div class="error">
+    } else if ($error_value == "fail") {
+        echo
+            '<div class="error">
           <p>' . __('Your domain name is not valid! Please try again!') . '</p>
       </div>';
-      }
-      ?>
+    }
+    ?>
 <form method="post" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]."?page=headless_config_plugin");?>">
   <?php
         settings_fields( 'headless_config_plugin_settings' );
@@ -139,51 +152,36 @@ function create_input_url_data_table()
   <input type="submit" name="submit" class="button button-primary" value="<?php esc_attr_e( 'Save' ); ?>" />
 </form>
 <?php
-    }
+}
 
-    function headless_config_register_settings() {
+function headless_config_register_settings() {
 
-      register_setting(
+    register_setting(
         'headless_config_plugin_settings',
         'headless_config_plugin_settings',
-      );
+    );
 
-      add_settings_section(
+    add_settings_section(
         'section_one',
         '',
         '',
         'headless_config_plugin'
-      );
-    
-      add_settings_field(
+    );
+
+    add_settings_field(
         'frontend_domain',
         '<h3>Frontend Domain</h3>',
         'headless_config_render_frontend_domain_field',
         'headless_config_plugin',
         'section_one'
-      );
+    );
 
-    }
-    add_action('admin_init', 'headless_config_register_settings');
+}
+add_action('admin_init', 'headless_config_register_settings');
 
 function headless_config_render_frontend_domain_field() {
-  global $servername;
-  global $dbname;
-  global $urlError;
-  global $value;
-
-    try {
-        $conn = new PDO("mysql:host=$servername;dbname=$dbname", DB_USER, DB_PASSWORD);
-        $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        $stmt = $conn->prepare("SELECT url_value FROM wp_input_url_data WHERE url_name = 'url address'");
-        $stmt->execute();
-        $result = $stmt->fetchAll();
-        $value = $result[0]["url_value"];
-
-
-    } catch(PDOException $e) {
-        echo "Something went wrong. We are trying to resolve it.";
-    }
+    global $urlError;
+    global $value;
 
     $options = get_option('headless_config_plugin_settings');
     printf(
@@ -194,8 +192,42 @@ function headless_config_render_frontend_domain_field() {
     ?>
 <span>* <?php echo $urlError;?></span>
 <?php
-
-
-    $conn = null;
 }
+
+/**
+ * Run code only once
+ */
+function open_domain() {
+
+    if ( get_option( 'open_domain_01' ) != 'completed' ) {
+
+        global $value;
+
+        if(!empty($value)){
+            ?>
+
+<script type="text/javascript">
+window.open('<?php echo $value; ?>', "_blank");
+</script>
+
+<?php
+
+        }
+
+        update_option( 'open_domain_01', 'completed' );
+    }
+}
+
+add_action( 'init', function(){
+    if ( is_user_logged_in())
+    {
+        add_action( 'admin_init', 'open_domain' );
+
+    } else {
+        delete_option( 'open_domain_01' );
+    }
+} );
+
+
+$conn = null;
 ?>
